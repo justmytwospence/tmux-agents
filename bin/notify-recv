@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# notify-recv -- show desktop notifications sent from remote hosts (macOS).
+#
+# A launchd agent listens on a unix socket in inetd nowait mode: one process per
+# connection, with the socket as stdin (see README "Remote notifications"). Each
+# connection delivers one JSON line from bin/claude-hook on a remote host,
+# carried back over an ssh RemoteForward (remote 127.0.0.1:7877 -> the socket).
+#
+# The payload is data only -- never executed. Fields:
+#   {title, subtitle, message, sound, session}
+
+set -u
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+IFS= read -r -t 5 line
+[[ -n "${line:-}" ]] || exit 0
+
+parsed=$(jq -r '[.title // "Claude Code", .subtitle // "", .message // "Waiting for input", .sound // "Ping", .session // "default"] | @tsv' <<<"$line" 2>/dev/null) || exit 0
+IFS=$'\t' read -r title subtitle message sound session <<<"$parsed"
+
+# Only sounds claude-hook actually sends; anything else falls back to Ping.
+case "$sound" in
+    Blow|Ping|Hero|Funk) ;;
+    *) sound="Ping" ;;
+esac
+
+args=(
+    -title "$title"
+    -message "${message:0:200}"
+    -sound "$sound"
+    -group "claude-remote-${session}"
+    -execute "osascript -e 'tell application \"Ghostty\" to activate'"
+)
+[[ -n "$subtitle" ]] && args+=(-subtitle "$subtitle")
+
+exec terminal-notifier "${args[@]}"

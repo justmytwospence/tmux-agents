@@ -1,0 +1,11 @@
+{
+  "name": "tmux-agents",
+  "version": "0.1.0",
+  "description": "Coding-agent state on tmux window tabs, and desktop notifications outside herdr.",
+  "license": "MIT",
+  "type": "module",
+  "private": true,
+  "pi": {
+    "extensions": ["./integrations/pi/tmux-agents.ts"]
+  }
+}
